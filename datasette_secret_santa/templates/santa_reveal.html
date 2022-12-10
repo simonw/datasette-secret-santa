@@ -1,27 +1,21 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta http-equiv="X-UA-Compatible" content="IE=edge">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Secret Santa: Reveal your target</title>
-</head>
-<body>
-  <h1>Reveal your target, {{ participant.name }}</h1>
-  {% if message %}
-    <p><strong class="secret-message">{{ message }}</strong></p>
-    <p>Go find a gift!</p>
-  {% else %}
-    <p>Enter your three word password to find out:</p>
-    <form action="/secret-santa/{{ santa.slug }}/reveal/{{ participant.id }}" method="post">
-      <input type="hidden" name="csrftoken" value="{{ csrftoken() }}">
-      <p>
-        <label for="password">Password</label>
-        <input type="text" name="password" id="password">
-      <p>
-        <input type="submit" value="Reveal your target">
-      </p>
-    </form>
-  {% endif %}
-</body>
-</html>
+{% extends "_secret_santa_base.html" %}
+{% block title %}Secret Santa: Reveal your target{% endblock %}
+
+{% block content %}
+<h1>Reveal your target, {{ participant.name }}</h1>
+{% if message %}
+  <p><strong class="secret-message">{{ message }}</strong></p>
+  <p>Go find a gift!</p>
+{% else %}
+  <p>Enter your three word password to find out:</p>
+  <form action="/secret-santa/{{ santa.slug }}/reveal/{{ participant.id }}" method="post">
+    <input type="hidden" name="csrftoken" value="{{ csrftoken() }}">
+    <p>
+      <label for="password">Password</label>
+      <input type="text" name="password" id="password">
+    <p>
+      <input type="submit" value="Reveal your target">
+    </p>
+  </form>
+{% endif %}
+{% endblock %}
