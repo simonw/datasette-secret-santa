@@ -10,6 +10,19 @@ import textwrap
 words = (pathlib.Path(__file__).parent / "words.txt").read_text().splitlines()
 
 
+async def _error(datasette, request, message, status=400):
+    return Response.html(
+        await datasette.render_template(
+            "secret_santa_error.html",
+            {
+                "message": message,
+            },
+            request=request,
+        ),
+        status=status,
+    )
+
+
 @hookimpl
 def startup(datasette):
     async def init():
@@ -52,7 +65,9 @@ async def secret_santa(request, datasette):
         await db.execute("select * from secret_santa where slug = ?", [slug])
     ).first()
     if santa is None:
-        return Response.html("Could not find secret santa", status=404)
+        return await _error(
+            datasette, request, "Could not find secret santa", status=404
+        )
     participants = [
         dict(r)
         for r in (
@@ -90,9 +105,11 @@ async def add_participant(request, datasette):
     data = await request.post_vars()
     name = data.get("name", "").strip()
     if not name:
-        return Response.html("Please provide a name", status=400)
+        return await _error(datasette, request, "Please provide a name", status=400)
     if santa is None:
-        return Response.html("Could not find secret santa", status=404)
+        return await _error(
+            datasette, request, "Could not find secret santa", status=404
+        )
     # Add the new participant
     await db.execute_write(
         "insert into secret_santa_participants (slug, name) values (:slug, :name)",
@@ -112,7 +129,9 @@ async def set_password(request, datasette):
         await db.execute("select * from secret_santa where slug = ?", [slug])
     ).first()
     if santa is None:
-        return Response.html("Could not find secret santa", status=404)
+        return await _error(
+            datasette, request, "Could not find secret santa", status=404
+        )
     participant_id = request.url_vars["id"]
     participant = (
         await db.execute(
@@ -121,7 +140,9 @@ async def set_password(request, datasette):
         )
     ).first()
     if participant is None:
-        return Response.html("Could not find participant", status=404)
+        return await _error(
+            datasette, request, "Could not find participant", status=404
+        )
     if request.method.lower() != "post":
         return Response.html(
             await datasette.render_template(
@@ -149,7 +170,9 @@ async def reveal(request, datasette):
         await db.execute("select * from secret_santa where slug = ?", [slug])
     ).first()
     if santa is None:
-        return Response.html("Could not find secret santa", status=404)
+        return await _error(
+            datasette, request, "Could not find secret santa", status=404
+        )
     participant_id = request.url_vars["id"]
     participant = (
         await db.execute(
@@ -158,9 +181,13 @@ async def reveal(request, datasette):
         )
     ).first()
     if participant is None:
-        return Response.html("Could not find participant", status=404)
+        return await _error(
+            datasette, request, "Could not find participant", status=404
+        )
     if not participant["secret_message_encrypted"]:
-        return Response.html("No secret message yet", status=404)
+        return await _error(
+            datasette, request, "Secret message not available yet", status=404
+        )
 
     if request.method.lower() != "post":
         return Response.html(
@@ -174,11 +201,14 @@ async def reveal(request, datasette):
         data = await request.post_vars()
         password = data.get("password", "").strip()
         if not password:
-            return Response.html("Please provide a password", status=400)
+            return await _error(
+                datasette, request, "Please provide a password", status=400
+            )
         # Decrypt the private key with the password
-        private_key = decrypt_private_key_for_user(participant, password)
-        if private_key is None:
-            return Response.html("Incorrect password", status=400)
+        try:
+            private_key = decrypt_private_key_for_user(participant, password)
+        except ValueError:
+            return await _error(datasette, request, "Incorrect password", status=400)
         # Decrypt the secret message with the private key
         decrypted_message = private_key.decrypt(
             participant["secret_message_encrypted"],
@@ -257,7 +287,9 @@ async def assign_participants(request, datasette):
         await db.execute("select * from secret_santa where slug = ?", [slug])
     ).first()
     if santa is None:
-        return Response.html("Could not find secret santa", status=404)
+        return await _error(
+            datasette, request, "Could not find secret santa", status=404
+        )
     participants = [
         dict(r)
         for r in (
@@ -267,9 +299,14 @@ async def assign_participants(request, datasette):
         ).rows
     ]
     if any(p["password_issued_at"] is None for p in participants):
-        return Response.html("Not all participants have passwords set", status=400)
+        return await _error(
+            datasette,
+            request,
+            "All participants must have a password before assigning",
+            status=400,
+        )
     if request.method.lower() != "post":
-        return Response.html("Please use POST to assign participants", status=405)
+        return await _error(datasette, request, "POST required", status=405)
     else:
         # Assign participants
         random.shuffle(participants)
