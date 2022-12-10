@@ -34,6 +34,6 @@ setup(
     entry_points={"datasette": ["secret_santa = datasette_secret_santa"]},
     install_requires=["datasette", "cryptography"],
     extras_require={"test": ["pytest", "pytest-asyncio"]},
-    package_data={"datasette_secret_santa": ["static/*", "templates/*"]},
+    package_data={"datasette_secret_santa": ["static/*", "templates/*", "words.txt"]},
     python_requires=">=3.7",
 )
