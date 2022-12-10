@@ -1,12 +1,8 @@
 from cryptography.hazmat.primitives.asymmetric import rsa
 from cryptography.hazmat.primitives import serialization, hashes
 from cryptography.hazmat.primitives.asymmetric import padding
-from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
 from cryptography.hazmat.backends import default_backend
-from cryptography.hazmat.primitives.padding import PKCS7
 from datasette import hookimpl, Response
-import hashlib
-import os
 import pathlib
 import random
 import textwrap
@@ -34,10 +30,8 @@ def startup(datasette):
                 name text,
                 secret_message_encrypted bytes,
                 password_issued_at text,
-                password_salt bytes,
                 public_key text,
-                private_key_encrypted_iv bytes,
-                private_key_encrypted_ct bytes,
+                private_key text,
                 message_read_at text
             );
         """
@@ -208,17 +202,10 @@ async def reveal(request, datasette):
 
 
 def decrypt_private_key_for_user(participant, password):
-    # Decrypt the private key with the password
-    password_sha256 = hashlib.sha256(password.encode("utf-8")).digest()
-    iv = participant["private_key_encrypted_iv"]
-    ct = participant["private_key_encrypted_ct"]
-    cipher = Cipher(
-        algorithms.AES(password_sha256), modes.CBC(iv), backend=default_backend()
-    )
-    decryptor = cipher.decryptor()
-    private_key_raw = decryptor.update(ct) + decryptor.finalize()
     return serialization.load_pem_private_key(
-        private_key_raw, password=None, backend=default_backend()
+        participant["private_key"].encode("utf-8"),
+        password=password.encode("utf-8"),
+        backend=default_backend(),
     )
 
 
@@ -229,54 +216,34 @@ async def generate_password_and_keys_for_user(db, participant_id):
     public_key = private_key.public_key()
 
     # Serialize the keys for storage or transmission
-    private_key_bytes = private_key.private_bytes(
+    private_key_serialized = private_key.private_bytes(
         encoding=serialization.Encoding.PEM,
         format=serialization.PrivateFormat.PKCS8,
-        encryption_algorithm=serialization.NoEncryption(),
-    )
-    public_key_bytes = public_key.public_bytes(
+        encryption_algorithm=serialization.BestAvailableEncryption(
+            password.encode("utf-8")
+        ),
+    ).decode("utf-8")
+    public_key_serialized = public_key.public_bytes(
         encoding=serialization.Encoding.PEM,
         format=serialization.PublicFormat.SubjectPublicKeyInfo,
-    )
-
-    # We will save public key bytes, but we need to save encrypted private key bytes
-    private_key_encrypted_iv, private_key_encrypted_ct = encrypt_message_symmetric_aes(
-        password.encode("utf-8"), private_key_bytes
-    )
+    ).decode("utf-8")
 
     await db.execute_write(
         """
         update secret_santa_participants
         set
             password_issued_at = datetime('now'),
-            -- password_salt = :password_salt,
             public_key = :public_key,
-            private_key_encrypted_iv = :private_key_encrypted_iv,
-            private_key_encrypted_ct = :private_key_encrypted_ct
+            private_key = :private_key
         where id = :id
         """,
         {
             "id": participant_id,
-            "password_salt": password.encode("utf-8"),
-            "public_key": public_key_bytes,
-            "private_key_encrypted_iv": private_key_encrypted_iv,
-            "private_key_encrypted_ct": private_key_encrypted_ct,
+            "public_key": public_key_serialized,
+            "private_key": private_key_serialized,
         },
     )
     return password
-
-
-def encrypt_message_symmetric_aes(secret_key, message):
-    secret_key = hashlib.sha256(secret_key).digest()
-    padder = PKCS7(128).padder()
-    padded_data = padder.update(message) + padder.finalize()
-    iv = os.urandom(16)  # generate random initialization vector
-    cipher = Cipher(
-        algorithms.AES(secret_key), modes.CBC(iv), backend=default_backend()
-    )
-    encryptor = cipher.encryptor()
-    ct = encryptor.update(padded_data) + encryptor.finalize()
-    return (iv, ct)
 
 
 async def assign_participants(request, datasette):
@@ -307,7 +274,7 @@ async def assign_participants(request, datasette):
             message = "You should buy a gift for {}".format(assigned["name"])
             # Encrypt the message with their public key
             public_key = serialization.load_pem_public_key(
-                participant["public_key"], backend=default_backend()
+                participant["public_key"].encode("utf-8"), backend=default_backend()
             )
             secret_message_encrypted = public_key.encrypt(
                 message.encode("utf-8"),

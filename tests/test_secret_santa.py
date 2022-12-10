@@ -66,8 +66,7 @@ async def test_full_flow(ds):
     # But should not have public/private keys
     for row in await db.execute("select * from secret_santa_participants"):
         assert not row["public_key"]
-        assert not row["private_key_encrypted_iv"]
-        assert not row["private_key_encrypted_ct"]
+        assert not row["private_key"]
 
     # Each user now sets their password
     participant_passwords = {}
@@ -90,8 +89,7 @@ async def test_full_flow(ds):
     # OK, at this point everyone should have a public/private key in the DB
     for row in await db.execute("select * from secret_santa_participants"):
         assert row["public_key"]
-        assert row["private_key_encrypted_iv"]
-        assert row["private_key_encrypted_ct"]
+        assert row["private_key"]
         # But not a message
         assert not row["secret_message_encrypted"]
 
