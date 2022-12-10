@@ -17,7 +17,10 @@ words = (pathlib.Path(__file__).parent / "words.txt").read_text().splitlines()
 @hookimpl
 def startup(datasette):
     async def init():
-        db = datasette.get_database("santa")
+        try:
+            db = datasette.get_database("santa")
+        except KeyError:
+            assert False, "datasette-secret-santa plugin requires santa.db database"
         await db.execute_write_script(
             textwrap.dedent(
                 """
@@ -72,8 +75,12 @@ async def secret_santa(request, datasette):
                 "santa": santa,
                 "participants": participants,
                 "is_ready": participants
-                and all(p["password_issued_at"] and not p["secret_message_encrypted"] for p in participants),
-                "is_done": participants and all(p["secret_message_encrypted"] for p in participants),
+                and all(
+                    p["password_issued_at"] and not p["secret_message_encrypted"]
+                    for p in participants
+                ),
+                "is_done": participants
+                and all(p["secret_message_encrypted"] for p in participants),
             },
             request=request,
         )
@@ -160,7 +167,7 @@ async def reveal(request, datasette):
         return Response.html("Could not find participant", status=404)
     if not participant["secret_message_encrypted"]:
         return Response.html("No secret message yet", status=404)
-    
+
     if request.method.lower() != "post":
         return Response.html(
             await datasette.render_template(
@@ -184,13 +191,17 @@ async def reveal(request, datasette):
             padding.OAEP(
                 mgf=padding.MGF1(algorithm=hashes.SHA256()),
                 algorithm=hashes.SHA256(),
-                label=None
-            )
+                label=None,
+            ),
         ).decode("utf-8")
         return Response.html(
             await datasette.render_template(
                 "santa_reveal.html",
-                {"santa": santa, "participant": participant, "message": decrypted_message},
+                {
+                    "santa": santa,
+                    "participant": participant,
+                    "message": decrypted_message,
+                },
                 request=request,
             )
         )
@@ -201,13 +212,13 @@ def decrypt_private_key_for_user(participant, password):
     password_sha256 = hashlib.sha256(password.encode("utf-8")).digest()
     iv = participant["private_key_encrypted_iv"]
     ct = participant["private_key_encrypted_ct"]
-    cipher = Cipher(algorithms.AES(password_sha256), modes.CBC(iv), backend=default_backend())
+    cipher = Cipher(
+        algorithms.AES(password_sha256), modes.CBC(iv), backend=default_backend()
+    )
     decryptor = cipher.decryptor()
     private_key_raw = decryptor.update(ct) + decryptor.finalize()
     return serialization.load_pem_private_key(
-        private_key_raw,
-        password=None,
-        backend=default_backend()
+        private_key_raw, password=None, backend=default_backend()
     )
 
 
@@ -296,16 +307,15 @@ async def assign_participants(request, datasette):
             message = "You should buy a gift for {}".format(assigned["name"])
             # Encrypt the message with their public key
             public_key = serialization.load_pem_public_key(
-                participant["public_key"],
-                backend=default_backend()
+                participant["public_key"], backend=default_backend()
             )
             secret_message_encrypted = public_key.encrypt(
                 message.encode("utf-8"),
                 padding.OAEP(
                     mgf=padding.MGF1(algorithm=hashes.SHA256()),
                     algorithm=hashes.SHA256(),
-                    label=None
-                )
+                    label=None,
+                ),
             )
 
             await db.execute_write(
