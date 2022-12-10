@@ -1,0 +1,15 @@
+{% extends "_secret_santa_base.html" %}
+{% block title %}Secret Santa{% endblock %}
+
+{% block content %}
+<h1>Secret Santa</h1>
+
+<ul>
+  {% for secret_santa in secret_santas %}
+    <li>
+      <a href="/secret-santa/{{ secret_santa.slug }}">{{ secret_santa.name }}</a>
+    </li>
+  {% endfor %}
+</ul>
+
+{% endblock %}

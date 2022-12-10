@@ -361,3 +361,23 @@ def register_routes():
         (r"^/secret-santa/(?P<slug>[^/]+)/reveal/(?P<id>\d+)$", reveal),
         (r"^/secret-santa$", index),
     ]
+
+
+@hookimpl
+def extra_template_vars(datasette, view_name):
+    async def secret_santa_index():
+        if view_name == "index":
+            db = datasette.get_database("santa")
+            return {
+                "secret_santas": [
+                    dict(r)
+                    for r in (
+                        await db.execute(
+                            "select * from secret_santa order by rowid desc"
+                        )
+                    )
+                ]
+            }
+        return {}
+
+    return secret_santa_index
