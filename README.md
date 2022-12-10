@@ -29,6 +29,8 @@ Then visit `https://your-app-name.glitch.me/santa/create_secret_santa` to create
 
 ## Usage
 
+![Animated GIF showing the plugin in action - the user adds three names, then gets the password for their account - then hits the assign button and uses their password to find out who they have been assigned.](https://raw.githubusercontent.com/simonw/datasette-secret-santa/main/secret-santa.gif)
+
 This plugin requires a database called `santa.db`. You can run it and create such a database like this:
 
     datasette santa.db --create
