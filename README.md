@@ -13,6 +13,20 @@ Install this plugin in the same environment as Datasette.
 
     datasette install datasette-secret-santa
 
+## Running this on Glitch
+
+https://glitch.com/ is a great way to host this application.
+
+Create a new application there and paste the following into your `glitch.json` file:
+
+```json
+{
+  "install": "pip3 install --user datasette datasette-secret-santa -U",
+  "start": "datasette --create .data/santa.db -p 3000"
+}
+```
+Then visit `https://your-app-name.glitch.me/santa/create_secret_santa` to create a new Secret Santa.
+
 ## Usage
 
 This plugin requires a database called `santa.db`. You can run it and create such a database like this:
