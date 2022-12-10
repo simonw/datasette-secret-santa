@@ -188,6 +188,10 @@ async def reveal(request, datasette):
                 label=None,
             ),
         ).decode("utf-8")
+        await db.execute_write(
+            "update secret_santa_participants set message_read_at = datetime('now') where id = ?",
+            [participant_id],
+        )
         return Response.html(
             await datasette.render_template(
                 "santa_reveal.html",

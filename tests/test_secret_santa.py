@@ -129,3 +129,7 @@ async def test_full_flow(ds):
 
     # Everyone should be a recipient
     assert len(recipients) == len(participant_passwords)
+
+    # Now everyone should have a message
+    for row in await db.execute("select * from secret_santa_participants"):
+        assert row["message_read_at"]
