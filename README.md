@@ -15,7 +15,13 @@ Install this plugin in the same environment as Datasette.
 
 ## Usage
 
-Usage instructions go here.
+This plugin requires a database called `santa.db`. You can run it and create such a database like this:
+
+    datasette santa.db --create
+
+It expects to be the only plugin installed, and will take over the `/` homepage.
+
+To create a new Secret Santa, visit `/santa/create_secret_santa`.
 
 ## Development
 
