@@ -27,15 +27,13 @@ setup(
     license="Apache License, Version 2.0",
     classifiers=[
         "Framework :: Datasette",
-        "License :: OSI Approved :: Apache Software License"
+        "License :: OSI Approved :: Apache Software License",
     ],
     version=VERSION,
     packages=["datasette_secret_santa"],
     entry_points={"datasette": ["secret_santa = datasette_secret_santa"]},
-    install_requires=["datasette"],
+    install_requires=["datasette", "cryptography"],
     extras_require={"test": ["pytest", "pytest-asyncio"]},
-    package_data={
-        "datasette_secret_santa": ["static/*", "templates/*"]
-    },
+    package_data={"datasette_secret_santa": ["static/*", "templates/*"]},
     python_requires=">=3.7",
 )
