@@ -25,7 +25,7 @@ Create a new application there and paste the following into your `glitch.json` f
   "start": "datasette --create .data/santa.db -p 3000"
 }
 ```
-Then visit `https://your-app-name.glitch.me/santa/create_secret_santa` to create a new Secret Santa.
+Then visit your new app's homepage and click the link to create a new secret santa group.
 
 ## Usage
 
@@ -37,7 +37,7 @@ This plugin requires a database called `santa.db`. You can run it and create suc
 
 It expects to be the only plugin installed, and will take over the `/` homepage.
 
-To create a new Secret Santa, visit `/santa/create_secret_santa`.
+To create a new Secret Santa, visit `/santa/create_secret_santa` (linked from the homepage).
 
 ## Development
 

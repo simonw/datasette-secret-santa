@@ -9,6 +9,8 @@
     <li>
       <a href="/secret-santa/{{ secret_santa.slug }}">{{ secret_santa.name }}</a>
     </li>
+  {% else %}
+    <li>No groups yet - <a href="/santa/create_secret_santa">create one here</a></li>
   {% endfor %}
 </ul>
 

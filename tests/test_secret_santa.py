@@ -141,3 +141,19 @@ async def test_redirects(ds, path):
     response = await ds.client.get(path)
     assert response.status_code == 302
     assert response.headers["location"] == "/"
+
+
+@pytest.mark.asyncio
+async def test_create_group_from_homepage(ds):
+    response1 = await ds.client.get("/")
+    assert response1.status_code == 200
+    assert '<a href="/santa/create_secret_santa">create one here' in response1.text
+    assert (await ds.client.get("/secret-santa/test")).status_code == 404
+    response2 = await ds.client.get("/santa/create_secret_santa")
+    csrftoken = response2.cookies["ds_csrftoken"]
+    post_response = await ds.client.post(
+        "/santa/create_secret_santa",
+        data={"slug": "test", "name": "Test group", "csrftoken": csrftoken},
+    )
+    assert post_response.status_code == 302
+    assert (await ds.client.get("/secret-santa/test")).status_code == 200
