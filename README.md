@@ -17,7 +17,9 @@ Install this plugin in the same environment as Datasette.
 
 https://glitch.com/ is a great way to host this application.
 
-Create a new application there and paste the following into your `glitch.json` file:
+You can [remix this project on Glitch](https://glitch.com/~datasette-secret-santa) to get your own copy.
+
+Or you can create a new application and paste the following into your `glitch.json` file:
 
 ```json
 {
