@@ -54,8 +54,8 @@ def startup(datasette):
     return init
 
 
-async def index(request):
-    return Response.html("List of secret santas goes here")
+async def redirect_to_home(request):
+    return Response.redirect("/")
 
 
 async def secret_santa(request, datasette):
@@ -359,7 +359,7 @@ def register_routes():
         (r"^/secret-santa/(?P<slug>[^/]+)/assign$", assign_participants),
         (r"^/secret-santa/(?P<slug>[^/]+)/set-password/(?P<id>\d+)$", set_password),
         (r"^/secret-santa/(?P<slug>[^/]+)/reveal/(?P<id>\d+)$", reveal),
-        (r"^/secret-santa$", index),
+        (r"^/secret-santa/?$", redirect_to_home),
     ]
 
 

@@ -133,3 +133,11 @@ async def test_full_flow(ds):
     # Now everyone should have a message
     for row in await db.execute("select * from secret_santa_participants"):
         assert row["message_read_at"]
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("path", ("/secret-santa", "/secret-santa/"))
+async def test_redirects(ds, path):
+    response = await ds.client.get(path)
+    assert response.status_code == 302
+    assert response.headers["location"] == "/"
